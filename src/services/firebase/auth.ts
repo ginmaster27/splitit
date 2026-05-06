@@ -38,11 +38,13 @@ export async function signInWithGoogleIdToken(idToken: string): Promise<UserProf
 }
 
 export function useGoogleAuthRequest() {
-  const env = process.env as Record<string, string | undefined>;
   return Google.useIdTokenAuthRequest({
-    webClientId: env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
-    iosClientId: env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
-    androidClientId: env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID
+    // @ts-expect-error Expo replaces direct EXPO_PUBLIC env reads during the web build.
+    webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
+    // @ts-expect-error Expo replaces direct EXPO_PUBLIC env reads during the web build.
+    iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
+    // @ts-expect-error Expo replaces direct EXPO_PUBLIC env reads during the web build.
+    androidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID
   });
 }
 

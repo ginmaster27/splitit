@@ -2,15 +2,19 @@ import { initializeApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
-const env = process.env as Record<string, string | undefined>;
-
 const envConfig = {
-  apiKey: env.EXPO_PUBLIC_FIREBASE_API_KEY,
-  authDomain: env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: env.EXPO_PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket: env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: env.EXPO_PUBLIC_FIREBASE_APP_ID
+  // @ts-expect-error Expo replaces direct EXPO_PUBLIC env reads during the web build.
+  apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
+  // @ts-expect-error Expo replaces direct EXPO_PUBLIC env reads during the web build.
+  authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  // @ts-expect-error Expo replaces direct EXPO_PUBLIC env reads during the web build.
+  projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID,
+  // @ts-expect-error Expo replaces direct EXPO_PUBLIC env reads during the web build.
+  storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  // @ts-expect-error Expo replaces direct EXPO_PUBLIC env reads during the web build.
+  messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  // @ts-expect-error Expo replaces direct EXPO_PUBLIC env reads during the web build.
+  appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID
 };
 
 export const isFirebaseConfigured = Boolean(envConfig.apiKey && envConfig.authDomain && envConfig.projectId && envConfig.appId);
