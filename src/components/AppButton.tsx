@@ -27,9 +27,9 @@ export function AppButton({ title, onPress, icon, variant = "primary", disabled,
 
 const styles = StyleSheet.create({
   base: {
-    minHeight: 48,
+    minHeight: 50,
     borderRadius: 8,
-    paddingHorizontal: 16,
+    paddingHorizontal: 14,
     alignItems: "center",
     justifyContent: "center",
     flexDirection: "row",
@@ -37,7 +37,7 @@ const styles = StyleSheet.create({
   },
   primary: { backgroundColor: colors.primary },
   secondary: { backgroundColor: colors.primarySoft },
-  ghost: { backgroundColor: "transparent", borderWidth: 1, borderColor: colors.line },
+  ghost: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line },
   danger: { backgroundColor: colors.danger },
   disabled: { opacity: 0.45 },
   pressed: { opacity: 0.85 },

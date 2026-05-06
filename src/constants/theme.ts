@@ -1,11 +1,11 @@
 import { DefaultTheme } from "@react-navigation/native";
 
 export const colors = {
-  background: "#f7f8fa",
+  background: "#f2f2f7",
   surface: "#ffffff",
-  ink: "#17202a",
-  muted: "#687385",
-  line: "#e4e8ef",
+  ink: "#111827",
+  muted: "#6b7280",
+  line: "#e5e7eb",
   primary: "#096b5a",
   primarySoft: "#dff4ef",
   accent: "#e66b2e",

@@ -22,13 +22,19 @@ export function BalanceCard({ label, amount, tone = "net" }: Props) {
 
 const styles = StyleSheet.create({
   card: {
-    flex: 1,
+    flexGrow: 1,
+    flexBasis: 0,
     minWidth: 104,
     backgroundColor: colors.surface,
     borderRadius: 8,
-    padding: 14,
+    padding: 16,
     borderWidth: 1,
-    borderColor: colors.line
+    borderColor: colors.line,
+    shadowColor: "#0f172a",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.06,
+    shadowRadius: 16,
+    elevation: 2
   },
   label: { color: colors.muted, fontSize: 12, fontWeight: "700" },
   amount: { color: colors.ink, fontSize: 20, fontWeight: "800", marginTop: 8 },

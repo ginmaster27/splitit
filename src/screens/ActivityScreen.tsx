@@ -67,6 +67,7 @@ function iconFor(type: ActivityItem["type"]): keyof typeof Ionicons.glyphMap {
     group_created: "people-outline",
     group_renamed: "create-outline",
     member_added: "person-add-outline",
+    splitwise_imported: "cloud-download-outline",
     expense_added: "receipt-outline",
     expense_updated: "pencil-outline",
     settlement_paid: "checkmark-done-outline"

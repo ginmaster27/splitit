@@ -53,11 +53,11 @@ export function DashboardScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { padding: 16, gap: 12, backgroundColor: colors.background },
-  hello: { color: colors.muted, fontSize: 15, fontWeight: "700", marginTop: 6 },
-  heading: { color: colors.ink, fontSize: 28, fontWeight: "900" },
+  screen: { paddingHorizontal: 20, gap: 14, backgroundColor: colors.background },
+  hello: { color: colors.muted, fontSize: 15, fontWeight: "700" },
+  heading: { color: colors.ink, fontSize: 30, fontWeight: "900", letterSpacing: 0 },
   balanceRow: { flexDirection: "row", gap: 12 },
-  actions: { flexDirection: "row", gap: 8, marginVertical: 6 },
+  actions: { flexDirection: "row", gap: 10, marginVertical: 8 },
   action: { flex: 1 },
-  section: { color: colors.ink, fontSize: 18, fontWeight: "900", marginTop: 10 }
+  section: { color: colors.ink, fontSize: 19, fontWeight: "900", marginTop: 12, letterSpacing: 0 }
 });

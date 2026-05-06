@@ -23,7 +23,8 @@ export function GroupDetailScreen({ route, navigation }: Props) {
   const { groupId } = route.params;
   const user = useUserStore((state) => state.user);
   const { activeGroup, groups, listenActiveGroup, refreshGroup, renameGroup, addMemberToGroup } = useGroupStore();
-  const { byGroup, hydrateGroupExpenses, listenExpenses } = useExpenseStore();
+  const mapImportedMemberEmail = useGroupStore((state) => state.mapImportedMemberEmail);
+  const { byGroup, hydrateGroupExpenses, listenExpenses, setGroupExpenses } = useExpenseStore();
   const { byGroup: balances, hydrateBalances, recompute } = useBalanceStore();
   const group = activeGroup?.id === groupId ? activeGroup : groups.find((item) => item.id === groupId);
   const expenses = byGroup[groupId] ?? [];
@@ -34,6 +35,8 @@ export function GroupDetailScreen({ route, navigation }: Props) {
   const [memberEmail, setMemberEmail] = useState("");
   const [savingName, setSavingName] = useState(false);
   const [addingMember, setAddingMember] = useState(false);
+  const [mappingMemberId, setMappingMemberId] = useState<string>();
+  const [mappingEmails, setMappingEmails] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string>();
 
   useEffect(() => {
@@ -121,6 +124,39 @@ export function GroupDetailScreen({ route, navigation }: Props) {
     }
   };
 
+  const mapMemberEmail = async (member: (typeof group.memberProfiles)[number]) => {
+    const email = mappingEmails[member.id]?.trim().toLowerCase();
+    setFormError(undefined);
+    if (!email) {
+      setFormError(`Add an email for ${member.name}.`);
+      return;
+    }
+    setMappingMemberId(member.id);
+    try {
+      const { group: savedGroup, expenses: savedExpenses } = await mapImportedMemberEmail({
+        group,
+        oldUserId: member.id,
+        name: member.name,
+        email,
+        currentUserId: user.id
+      });
+      await setGroupExpenses(savedGroup.id, savedExpenses);
+      setMappingEmails((current) => {
+        const next = { ...current };
+        delete next[member.id];
+        return next;
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to map this member.";
+      setFormError(message);
+      Alert.alert("Could not map member", message);
+    } finally {
+      setMappingMemberId(undefined);
+    }
+  };
+
+  const importedMembersWithoutEmail = group.memberProfiles.filter((member) => !member.email);
+
   return (
     <ScreenScrollView contentContainerStyle={styles.screen}>
       <View style={styles.header}>
@@ -176,6 +212,38 @@ export function GroupDetailScreen({ route, navigation }: Props) {
           </View>
         ))}
       </View>
+      {importedMembersWithoutEmail.length ? (
+        <>
+          <Text style={styles.section}>Map imported members</Text>
+          <View style={styles.mappingBox}>
+            <Text style={styles.mappingHelp}>Splitwise exports names only. Add the correct email for each imported person to link them to a Splitit user.</Text>
+            {importedMembersWithoutEmail.map((member) => (
+              <View key={member.id} style={styles.mappingRow}>
+                <View style={styles.mappingName}>
+                  <Text style={styles.memberName}>{member.name}</Text>
+                  <Text style={styles.memberEmail}>Imported from Splitwise</Text>
+                </View>
+                <AppInput
+                  label="Email"
+                  value={mappingEmails[member.id] ?? ""}
+                  onChangeText={(value) => setMappingEmails((current) => ({ ...current, [member.id]: value }))}
+                  placeholder="name@email.com"
+                  autoCapitalize="none"
+                  style={styles.mappingInput}
+                />
+                <AppButton
+                  title={mappingMemberId === member.id ? "Saving..." : "Map"}
+                  icon="link-outline"
+                  variant="secondary"
+                  onPress={() => mapMemberEmail(member)}
+                  disabled={Boolean(mappingMemberId)}
+                  style={styles.mapButton}
+                />
+              </View>
+            ))}
+          </View>
+        </>
+      ) : null}
       <Text style={styles.section}>Settlement suggestions</Text>
       {balance?.settlementSuggestions.length ? (
         balance.settlementSuggestions.map((item) => {
@@ -225,7 +293,14 @@ const styles = StyleSheet.create({
   members: { gap: 8 },
   member: { backgroundColor: colors.surface, borderRadius: 8, borderWidth: 1, borderColor: colors.line, padding: 12, flexDirection: "row", alignItems: "center", gap: 10 },
   memberName: { flex: 1, color: colors.ink, fontWeight: "800" },
+  memberEmail: { color: colors.muted, fontSize: 12, marginTop: 3 },
   memberBalance: { fontWeight: "900" },
+  mappingBox: { backgroundColor: colors.surface, borderRadius: 8, borderWidth: 1, borderColor: colors.line, padding: 12, gap: 12 },
+  mappingHelp: { color: colors.muted, lineHeight: 20 },
+  mappingRow: { gap: 8 },
+  mappingName: { gap: 2 },
+  mappingInput: { marginBottom: 0 },
+  mapButton: { alignSelf: "flex-start", minHeight: 40 },
   positive: { color: colors.success },
   negative: { color: colors.danger },
   suggestion: { backgroundColor: colors.surface, borderRadius: 8, borderWidth: 1, borderColor: colors.line, padding: 12, gap: 8 },

@@ -7,10 +7,12 @@ import {
   createGroup as createGroupDoc,
   fetchGroup,
   fetchUserGroups,
+  importSplitwiseGroup as importSplitwiseGroupDoc,
   listenGroup,
+  mapImportedGroupMember,
   updateGroupName
 } from "@/services/firebase/firestore";
-import { Group, GroupType, UserProfile } from "@/types";
+import { Expense, Group, GroupType, UserProfile } from "@/types";
 
 type GroupMemberProfile = Pick<UserProfile, "id" | "name" | "email" | "avatar" | "upiId">;
 
@@ -22,8 +24,15 @@ interface GroupState {
   hydrateGroups: (userId: string) => Promise<void>;
   refreshGroups: (userId: string) => Promise<void>;
   createGroup: (input: { name: string; type: GroupType; members: UserProfile[]; currentUser: UserProfile }) => Promise<Group>;
+  importSplitwiseGroup: (input: {
+    name: string;
+    members: Pick<UserProfile, "id" | "name" | "email" | "avatar" | "upiId">[];
+    expenses: Omit<Expense, "id" | "groupId">[];
+    currentUser: UserProfile;
+  }) => Promise<{ group: Group; expenses: Expense[] }>;
   renameGroup: (input: { groupId: string; name: string; currentUserId: string; currentUserName: string }) => Promise<void>;
   addMemberToGroup: (input: { group: Group; member: GroupMemberProfile; currentUserId: string; currentUserName: string }) => Promise<Group>;
+  mapImportedMemberEmail: (input: { group: Group; oldUserId: string; name: string; email: string; currentUserId: string }) => Promise<{ group: Group; expenses: Expense[] }>;
   refreshGroup: (groupId: string) => Promise<Group | null>;
   listenActiveGroup: (groupId: string) => Unsubscribe;
   patchGroup: (groupId: string, patch: Partial<Group>) => void;
@@ -77,6 +86,33 @@ export const useGroupStore = create<GroupState>((set, get) => ({
     set({ groups });
     await cache.writeGroups(currentUser.id, groups);
     return created;
+  },
+  importSplitwiseGroup: async ({ name, members, expenses, currentUser }) => {
+    const uniqueMembers = dedupeMembers(members);
+    if (!uniqueMembers.some((member) => member.id === currentUser.id)) {
+      uniqueMembers.unshift({
+        id: currentUser.id,
+        name: currentUser.name,
+        email: currentUser.email,
+        avatar: currentUser.avatar,
+        upiId: currentUser.upiId
+      });
+    }
+    const { group, expenses: importedExpenses } = await importSplitwiseGroupDoc({
+      group: {
+        name,
+        type: "Friends",
+        memberIds: uniqueMembers.map((member) => member.id),
+        memberProfiles: uniqueMembers,
+        createdBy: currentUser.id
+      },
+      expenses,
+      actor: { id: currentUser.id, name: currentUser.name }
+    });
+    const groups = [group, ...get().groups.filter((item) => item.id !== group.id)];
+    set({ groups, activeGroup: group });
+    await cache.writeGroups(currentUser.id, groups);
+    return { group, expenses: importedExpenses };
   },
   renameGroup: async ({ groupId, name, currentUserId, currentUserName }) => {
     const previousGroups = get().groups;
@@ -145,6 +181,13 @@ export const useGroupStore = create<GroupState>((set, get) => ({
       throw error;
     }
   },
+  mapImportedMemberEmail: async ({ group, oldUserId, name, email, currentUserId }) => {
+    const { group: saved, expenses } = await mapImportedGroupMember({ group, oldUserId, name, email });
+    const groups = get().groups.map((item) => (item.id === saved.id ? saved : item));
+    set({ groups, activeGroup: saved });
+    await cache.writeGroups(currentUserId, groups);
+    return { group: saved, expenses };
+  },
   refreshGroup: async (groupId) => {
     const group = await fetchGroup(groupId);
     if (group) {
@@ -165,3 +208,13 @@ export const useGroupStore = create<GroupState>((set, get) => ({
     });
   }
 }));
+
+function dedupeMembers(members: GroupMemberProfile[]) {
+  const seen = new Set<string>();
+  return members.filter((member) => {
+    const key = member.id || member.email || member.name;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}

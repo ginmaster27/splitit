@@ -1,7 +1,14 @@
 export type GroupType = "Trip" | "Home" | "Friends" | "Office" | "Couple";
 export type SplitType = "equal" | "exact" | "percentage";
 export type SettlementStatus = "pending" | "paid";
-export type ActivityType = "group_created" | "group_renamed" | "member_added" | "expense_added" | "expense_updated" | "settlement_paid";
+export type ActivityType =
+  | "group_created"
+  | "group_renamed"
+  | "member_added"
+  | "splitwise_imported"
+  | "expense_added"
+  | "expense_updated"
+  | "settlement_paid";
 
 export interface UserProfile {
   id: string;
@@ -116,6 +123,7 @@ export type RootStackParamList = {
   GroupDetail: { groupId: string };
   AddExpense: { groupId?: string; expenseId?: string };
   CreateGroup: undefined;
+  ImportSplitwise: undefined;
   SettleUp: { groupId?: string; payerId?: string; receiverId?: string; amount?: number };
 };
 

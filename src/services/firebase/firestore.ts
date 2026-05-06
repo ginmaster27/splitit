@@ -17,6 +17,7 @@ import {
 } from "firebase/firestore";
 import { db } from "./config";
 import { ActivityItem, DashboardSummary, Expense, Group, Settlement, UserProfile } from "@/types";
+import { computeBalances } from "@/utils/balanceEngine";
 
 const now = () => Date.now();
 const sortByUpdatedAt = (groups: Group[]) => [...groups].sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0));
@@ -240,6 +241,136 @@ export async function createGroup(group: Omit<Group, "id">): Promise<Group> {
   return { id: ref.id, ...group };
 }
 
+export async function importSplitwiseGroup(input: {
+  group: Omit<Group, "id" | "totalSpend" | "lastExpenseTitle" | "lastExpenseAt" | "balanceSummary" | "updatedAt">;
+  expenses: Omit<Expense, "id" | "groupId">[];
+  actor: Pick<UserProfile, "id" | "name">;
+}): Promise<{ group: Group; expenses: Expense[] }> {
+  const groupDoc = doc(collection(db, "groups"));
+  const expenseDocs = input.expenses.map((expense) => ({ ref: doc(collection(db, "expenses")), expense }));
+  const expenses: Expense[] = expenseDocs.map(({ ref, expense }) => ({ id: ref.id, groupId: groupDoc.id, ...expense }));
+  const sortedExpenses = sortByCreatedAt(expenses);
+  const latest = sortedExpenses[0];
+  const group: Omit<Group, "id"> = {
+    ...input.group,
+    totalSpend: expenses.reduce((sum, expense) => sum + expense.amount, 0),
+    lastExpenseTitle: latest?.title,
+    lastExpenseAt: latest?.createdAt,
+    balanceSummary: computeBalances(expenses).netBalances,
+    updatedAt: now()
+  };
+  const activityRef = doc(collection(db, "notifications"));
+  const batch = writeBatch(db);
+
+  batch.set(groupDoc, clean(group));
+  group.memberProfiles.forEach((member) => {
+    batch.set(doc(collection(db, "groupMembers")), clean({
+      groupId: groupDoc.id,
+      userId: member.id,
+      name: member.name,
+      email: member.email,
+      upiId: member.upiId,
+      avatar: member.avatar,
+      joinedAt: now()
+    }));
+  });
+  expenseDocs.forEach(({ ref, expense }) => batch.set(ref, clean({ ...expense, groupId: groupDoc.id })));
+  batch.set(activityRef, clean({
+    groupId: groupDoc.id,
+    groupName: group.name,
+    actorId: input.actor.id,
+    actorName: input.actor.name,
+    type: "splitwise_imported",
+    sourceId: groupDoc.id,
+    title: "Splitwise import",
+    description: `${input.actor.name} imported ${group.name} from Splitwise CSV`,
+    amount: group.totalSpend,
+    createdAt: now()
+  }));
+
+  await batch.commit();
+  return { group: { ...group, id: groupDoc.id }, expenses: sortedExpenses };
+}
+
+export async function mapImportedGroupMember(input: {
+  group: Group;
+  oldUserId: string;
+  name: string;
+  email: string;
+}): Promise<{ group: Group; expenses: Expense[] }> {
+  const normalizedEmail = input.email.trim().toLowerCase();
+  if (!normalizedEmail) throw new Error("Email is required.");
+  const existingUser = await fetchUserByEmail(normalizedEmail);
+  const nextUserId = existingUser?.id ?? `guest-${normalizedEmail}`;
+  const nextProfile = {
+    id: nextUserId,
+    name: existingUser?.name ?? input.name,
+    email: normalizedEmail,
+    avatar: existingUser?.avatar,
+    upiId: existingUser?.upiId ?? `${normalizedEmail.split("@")[0]}@upi`
+  };
+
+  const [expenseSnap, settlementSnap, oldMemberSnap, nextMemberSnap] = await Promise.all([
+    getDocs(query(collection(db, "expenses"), where("groupId", "==", input.group.id))),
+    getDocs(query(collection(db, "settlements"), where("groupId", "==", input.group.id))),
+    getDocs(query(collection(db, "groupMembers"), where("groupId", "==", input.group.id), where("userId", "==", input.oldUserId))),
+    getDocs(query(collection(db, "groupMembers"), where("groupId", "==", input.group.id), where("userId", "==", nextUserId)))
+  ]);
+
+  const patchedExpenses = expenseSnap.docs.map((item) => {
+    const expense = { id: item.id, ...item.data() } as Expense;
+    return replaceExpenseUser(expense, input.oldUserId, nextUserId, nextProfile.name);
+  });
+  const balanceSummary = computeBalances(patchedExpenses).netBalances;
+  const memberProfiles = mergeMemberProfiles(input.group.memberProfiles, input.oldUserId, nextProfile);
+  const memberIds = Array.from(new Set(memberProfiles.map((member) => member.id)));
+  const nextGroup: Group = {
+    ...input.group,
+    memberIds,
+    memberProfiles,
+    balanceSummary,
+    updatedAt: now()
+  };
+  const batch = writeBatch(db);
+
+  batch.update(groupRef(input.group.id), clean({
+    memberIds,
+    memberProfiles,
+    balanceSummary,
+    updatedAt: nextGroup.updatedAt
+  }));
+  expenseSnap.docs.forEach((item, index) => {
+    const { id: _id, ...expense } = patchedExpenses[index];
+    batch.update(item.ref, clean(expense));
+  });
+  settlementSnap.docs.forEach((item) => {
+    const settlement = item.data() as Settlement;
+    batch.update(item.ref, clean({
+      payerId: settlement.payerId === input.oldUserId ? nextUserId : settlement.payerId,
+      receiverId: settlement.receiverId === input.oldUserId ? nextUserId : settlement.receiverId
+    }));
+  });
+
+  if (nextMemberSnap.empty) {
+    const oldMemberRef = oldMemberSnap.docs[0]?.ref;
+    if (oldMemberRef) {
+      batch.update(oldMemberRef, clean({
+        userId: nextProfile.id,
+        name: nextProfile.name,
+        email: nextProfile.email,
+        avatar: nextProfile.avatar,
+        upiId: nextProfile.upiId,
+        updatedAt: now()
+      }));
+    }
+  } else {
+    oldMemberSnap.docs.forEach((item) => batch.delete(item.ref));
+  }
+
+  await batch.commit();
+  return { group: nextGroup, expenses: sortByCreatedAt(patchedExpenses) };
+}
+
 export async function updateGroupName(groupId: string, name: string) {
   await updateDoc(groupRef(groupId), clean({ name, updatedAt: now() }));
 }
@@ -276,6 +407,41 @@ export async function addGroupMember(
   });
 
   return nextGroup;
+}
+
+function replaceExpenseUser(expense: Expense, oldUserId: string, nextUserId: string, nextName: string): Expense {
+  const splitsByUser = new Map<string, { userId: string; amount?: number; percentage?: number }>();
+  expense.splits.forEach((split) => {
+    const userId = split.userId === oldUserId ? nextUserId : split.userId;
+    const existing = splitsByUser.get(userId);
+    splitsByUser.set(userId, {
+      userId,
+      amount: (existing?.amount ?? 0) + (split.amount ?? 0),
+      percentage: split.percentage !== undefined || existing?.percentage !== undefined ? (existing?.percentage ?? 0) + (split.percentage ?? 0) : undefined
+    });
+  });
+
+  return {
+    ...expense,
+    payerId: expense.payerId === oldUserId ? nextUserId : expense.payerId,
+    payerName: expense.payerId === oldUserId ? nextName : expense.payerName,
+    participantIds: Array.from(new Set(expense.participantIds.map((id) => (id === oldUserId ? nextUserId : id)))),
+    splits: Array.from(splitsByUser.values())
+  };
+}
+
+function mergeMemberProfiles(
+  profiles: Group["memberProfiles"],
+  oldUserId: string,
+  nextProfile: Pick<UserProfile, "id" | "name" | "email" | "avatar" | "upiId">
+) {
+  const withoutOld = profiles.filter((member) => member.id !== oldUserId);
+  const existingIndex = withoutOld.findIndex((member) => member.id === nextProfile.id || member.email.toLowerCase() === nextProfile.email);
+  if (existingIndex >= 0) {
+    withoutOld[existingIndex] = { ...withoutOld[existingIndex], ...nextProfile };
+    return withoutOld;
+  }
+  return withoutOld.map((member) => (member.id === oldUserId ? nextProfile : member)).concat(nextProfile);
 }
 
 export async function fetchGroup(groupId: string): Promise<Group | null> {

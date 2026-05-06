@@ -14,6 +14,7 @@ interface ExpenseState {
   addExpense: (expense: Omit<Expense, "id">, group: Group) => Promise<Expense>;
   updateExpense: (expenseId: string, expense: Omit<Expense, "id">, group: Group) => Promise<{ expense: Expense; groupPatch: Partial<Group> }>;
   listenExpenses: (groupId: string) => Unsubscribe;
+  setGroupExpenses: (groupId: string, expenses: Expense[]) => Promise<void>;
   setRecent: (expenses: Expense[]) => void;
 }
 
@@ -92,6 +93,10 @@ export const useExpenseStore = create<ExpenseState>((set, get) => ({
       set({ byGroup: { ...get().byGroup, [groupId]: expenses } });
       await cache.writeGroupExpenses(groupId, expenses);
     }),
+  setGroupExpenses: async (groupId, expenses) => {
+    set({ byGroup: { ...get().byGroup, [groupId]: expenses } });
+    await cache.writeGroupExpenses(groupId, expenses);
+  },
   setRecent: (expenses) => set({ recent: expenses })
 }));
 

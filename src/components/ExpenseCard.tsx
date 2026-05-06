@@ -38,13 +38,18 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.surface,
     borderRadius: 8,
-    padding: 14,
+    padding: 16,
     borderWidth: 1,
     borderColor: colors.line,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    gap: 12
+    gap: 12,
+    shadowColor: "#0f172a",
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.05,
+    shadowRadius: 14,
+    elevation: 1
   },
   title: { color: colors.ink, fontSize: 15, fontWeight: "800" },
   meta: { color: colors.muted, fontSize: 12, marginTop: 5 },

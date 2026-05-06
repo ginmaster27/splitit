@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { StyleSheet, Text } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { AppButton } from "@/components/AppButton";
 import { EmptyState } from "@/components/EmptyState";
@@ -22,13 +22,18 @@ export function GroupsScreen() {
   return (
     <ScreenScrollView contentContainerStyle={styles.screen}>
       <Text style={styles.heading}>Groups</Text>
-      <AppButton title="Create group" icon="add" onPress={() => navigation.navigate("CreateGroup")} />
+      <View style={styles.actions}>
+        <AppButton title="Create group" icon="add" onPress={() => navigation.navigate("CreateGroup")} style={styles.action} />
+        <AppButton title="Import CSV" icon="cloud-upload-outline" variant="secondary" onPress={() => navigation.navigate("ImportSplitwise")} style={styles.action} />
+      </View>
       {groups.length ? groups.map((group) => <GroupCard key={group.id} group={group} currentUserId={user.id} onPress={() => navigation.navigate("GroupDetail", { groupId: group.id })} />) : <EmptyState title="No active groups" body="Start by creating Turya Expense, PHF Meet Up, or any group you need." icon="people-outline" />}
     </ScreenScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { padding: 16, gap: 12, backgroundColor: colors.background },
-  heading: { color: colors.ink, fontSize: 28, fontWeight: "900" }
+  screen: { paddingHorizontal: 20, gap: 14, backgroundColor: colors.background },
+  heading: { color: colors.ink, fontSize: 28, fontWeight: "900" },
+  actions: { flexDirection: "row", gap: 10 },
+  action: { flex: 1 }
 });
