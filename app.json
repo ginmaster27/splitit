@@ -7,12 +7,29 @@
     "orientation": "portrait",
     "icon": "./assets/icons/logo.png",
     "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true,
+      "icon": "./assets/icons/logo.png"
+    },
+    "android": {
+      "package": "com.splitit.app",
+      "icon": "./assets/icons/logo.png",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icons/logo.png",
+        "backgroundColor": "#ffffff"
+      }
+    },
     "assetBundlePatterns": [
       "**/*"
     ],
     "web": {
       "bundler": "metro",
-      "favicon": "./assets/favicon/favicon.png"
+      "favicon": "./assets/favicon/favicon.png",
+      "name": "Splitit",
+      "shortName": "Splitit",
+      "themeColor": "#ffffff",
+      "backgroundColor": "#ffffff",
+      "display": "standalone"
     },
     "plugins": [
       "expo-font"
