@@ -35,8 +35,8 @@ export function DashboardScreen() {
       <Text style={styles.hello}>Hi {user.name.split(" ")[0]}</Text>
       <Text style={styles.heading}>Your balances</Text>
       <View style={styles.balanceRow}>
-        <BalanceCard label="You owe" amount={summary?.totalOwed ?? user.totalOwed} tone="owed" />
-        <BalanceCard label="You are owed" amount={summary?.totalReceivable ?? user.totalReceivable} tone="receivable" />
+        <BalanceCard label="You owe" amount={summary?.totalOwed ?? user.totalOwed} tone="owed" style={styles.balanceCard} />
+        <BalanceCard label="You are owed" amount={summary?.totalReceivable ?? user.totalReceivable} tone="receivable" style={styles.balanceCard} />
       </View>
       <BalanceCard label="Net balance" amount={summary?.netBalance ?? user.netBalance} tone="net" />
       <View style={styles.actions}>
@@ -57,6 +57,7 @@ const styles = StyleSheet.create({
   hello: { color: colors.muted, fontSize: 15, fontWeight: "700" },
   heading: { color: colors.ink, fontSize: 30, fontWeight: "900", letterSpacing: 0 },
   balanceRow: { flexDirection: "row", gap: 12 },
+  balanceCard: { flex: 1 },
   actions: { flexDirection: "row", gap: 10, marginVertical: 8 },
   action: { flex: 1 },
   section: { color: colors.ink, fontSize: 19, fontWeight: "900", marginTop: 12, letterSpacing: 0 }

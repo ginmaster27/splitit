@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View, type ViewStyle } from "react-native";
 import { colors } from "@/constants/theme";
 import { formatINR } from "@/utils/money";
 
@@ -6,12 +6,13 @@ interface Props {
   label: string;
   amount: number;
   tone?: "owed" | "receivable" | "net";
+  style?: ViewStyle;
 }
 
-export function BalanceCard({ label, amount, tone = "net" }: Props) {
+export function BalanceCard({ label, amount, tone = "net", style }: Props) {
   const positive = amount >= 0;
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, style]}>
       <Text style={styles.label}>{label}</Text>
       <Text style={[styles.amount, tone === "owed" && styles.owed, tone === "receivable" && styles.receivable, tone === "net" && (positive ? styles.receivable : styles.owed)]}>
         {formatINR(Math.abs(amount))}
@@ -22,8 +23,6 @@ export function BalanceCard({ label, amount, tone = "net" }: Props) {
 
 const styles = StyleSheet.create({
   card: {
-    flexGrow: 1,
-    flexBasis: 0,
     minWidth: 104,
     backgroundColor: colors.surface,
     borderRadius: 8,
