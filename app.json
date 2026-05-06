@@ -12,7 +12,7 @@
     ],
     "web": {
       "bundler": "metro",
-      "favicon": "./assets/favicon/favicon.ico"
+      "favicon": "./assets/favicon/favicon.png"
     },
     "plugins": [
       "expo-font"
