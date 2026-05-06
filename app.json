@@ -5,12 +5,14 @@
     "scheme": "splitit",
     "version": "1.0.0",
     "orientation": "portrait",
+    "icon": "./assets/icons/logo.png",
     "userInterfaceStyle": "light",
     "assetBundlePatterns": [
       "**/*"
     ],
     "web": {
-      "bundler": "metro"
+      "bundler": "metro",
+      "favicon": "./assets/favicon/favicon.png"
     },
     "plugins": [
       "expo-font"
